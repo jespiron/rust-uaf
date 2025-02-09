@@ -2,9 +2,11 @@
 
 This demonstrates a classic UAF vulnerability.
 
-When a `User` object is deleted and `Data` is created, since they're both the same size of 16 bytes, the memory allocator will typically reuse the freed `User` chunk for the new `Data` allocation. **NOTE:** the reason we use jemalloc is so that `User`'s chunk is reused for the `Data` allocation.
+When a `User` object is deleted and `Data` is created, since they're both the same size of 16 bytes, the memory allocator will typically reuse the freed `User` chunk for the new `Data` allocation.
 
 The User struct's `func` pointer overlaps with Data's `buf` pointer, both of which are at offset 0. By modifying Data's `buf`, we directly overwrite what the program thinks is the User's function pointer. Then, when we call the User's function, the `win` function should be invoked.
+
+ **NOTE:** The reason we use jemalloc is so that `User`'s chunk is reused for the `Data` allocation. As of now, this only works on Mac and Linux. Windows users can run this in WSL
 
 # Solution
 
