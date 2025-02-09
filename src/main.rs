@@ -1,12 +1,17 @@
+use std::alloc::{alloc, Layout};
 use std::process::Command;
+use std::ptr;
 
-#[repr(C)]
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+#[repr(C, align(16))]
 struct User {
     func: fn(),
     data: usize,
 }
 
-#[repr(C)]
+#[repr(C, align(16))]
 struct Data {
     buf: *mut u8,
     len: usize,
@@ -69,16 +74,23 @@ fn main() {
             }
             3 => {
                 if data.is_none() {
-                    let d = Box::new(Data {
-                        buf: std::ptr::null_mut(),
-                        len: 0,
-                    });
-                    let data_addr = d.as_ref() as *const Data;
-                    data = Some(d);
-                    println!("[DEBUG] Data address: {:p}", data_addr);
-                    println!("[+] Data created");
-                } else {
-                    println!("[!] Data already exists");
+                    // 2. Allocate filler objects to control heap layout
+                    //let _filler = vec![Box::new([0u8; 16])];  // Same size as User/Data
+                    
+                    // 3. Manually allocate memory with User's layout
+                    let layout = Layout::new::<User>();
+                    let ptr = unsafe { alloc(layout) } as *mut Data;
+                    
+                    // 4. Initialize Data in same memory location
+                    unsafe {
+                        ptr::write(ptr, Data {
+                            buf: std::ptr::null_mut(),
+                            len: 0,
+                        });
+                    }
+                    
+                    data = Some(unsafe { Box::from_raw(ptr) });
+                    println!("[+] Data forced into User memory at: {:p}", ptr);
                 }
             }
             4 => {
