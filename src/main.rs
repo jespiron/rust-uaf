@@ -74,23 +74,15 @@ fn main() {
             }
             3 => {
                 if data.is_none() {
-                    // 2. Allocate filler objects to control heap layout
-                    //let _filler = vec![Box::new([0u8; 16])];  // Same size as User/Data
-                    
-                    // 3. Manually allocate memory with User's layout
-                    let layout = Layout::new::<User>();
-                    let ptr = unsafe { alloc(layout) } as *mut Data;
-                    
-                    // 4. Initialize Data in same memory location
-                    unsafe {
-                        ptr::write(ptr, Data {
-                            buf: std::ptr::null_mut(),
-                            len: 0,
-                        });
-                    }
-                    
-                    data = Some(unsafe { Box::from_raw(ptr) });
-                    println!("[+] Data forced into User memory at: {:p}", ptr);
+                    let d = Box::new(Data {
+                        buf: std::ptr::null_mut(),
+                        len: 0,
+                    });
+                    println!("[DEBUG] Data address: {:p}", d);
+                    data = Some(d);
+                    println!("[+] Data created");
+                } else {
+                    println!("[!] Data already exists");
                 }
             }
             4 => {
@@ -112,7 +104,6 @@ fn main() {
                 if !user_ptr.is_null() {
                     unsafe {
                         let user = &*user_ptr;
-                        println!("[DEBUG] User address: {:p}", user_ptr);
                         println!("[DEBUG] Calling {:p}", user.func);
                         (user.func)();
                     }
